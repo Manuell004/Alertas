@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<title>Crear alerta</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0e1218;
+    --card: #151b23;
+    --field: #1b222c;
+    --line: #2a3340;
+    --text: #eef2f7;
+    --muted: #8b97a8;
+    --accent: #5fd6c2;
+    --accent-ink: #06231f;
+    --danger: #ff7a7a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 20px 16px 120px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 30px; line-height: 1.1; margin: 8px 0 2px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 20px; margin: 30px 0 8px; font-weight: 600; }
+  label.campo { display: block; font-size: 20px; font-weight: 600; margin: 26px 0 2px; }
+  .hint { color: var(--muted); font-size: 14px; margin: 0 0 10px; }
+  ul.ayuda { margin: 0 0 14px; padding-left: 20px; color: var(--text); }
+  ul.ayuda li { margin: 4px 0; }
+  .req { color: var(--danger); }
+  .fila { display: flex; gap: 10px; align-items: center; }
+  .fila > * { flex: 1; }
+  .fila > .fijo { flex: 0 0 auto; }
+  input[type=text], input[type=number], input[type=search] {
+    width: 100%; background: var(--field); color: var(--text);
+    border: 1px solid var(--line); border-radius: 18px;
+    padding: 15px 18px; font: inherit; outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  ::placeholder { color: #5f6b7c; }
+  .caja { border: 1px solid var(--line); border-radius: 22px; padding: 16px; background: var(--card); }
+  .caja .cab { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+  button { font: inherit; cursor: pointer; border: 0; }
+  .btn {
+    width: 100%; border-radius: 999px; padding: 15px 18px; font-weight: 600;
+    background: var(--field); color: var(--text); margin-top: 12px;
+  }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primario { background: var(--accent); color: var(--accent-ink); font-size: 18px; }
+  .btn.suave { background: transparent; border: 1px solid var(--line); }
+  .btn.chico { width: auto; margin: 0; padding: 14px 18px; border-radius: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--field); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 8px 8px 14px; font-size: 15px;
+  }
+  .chip button { background: #2a3340; color: var(--text); width: 24px; height: 24px; border-radius: 50%; line-height: 22px; padding: 0; }
+  .plat {
+    background: transparent; color: var(--text); border: 1px solid var(--line);
+    border-radius: 999px; padding: 14px 22px; font-size: 17px;
+  }
+  .plat[aria-pressed=true] { border-color: var(--accent); background: rgba(95,214,194,.14); color: var(--accent); }
+  .precio { position: relative; }
+  .precio input { padding-right: 38px; text-align: center; }
+  .precio span { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .etq { display: flex; justify-content: space-between; color: var(--muted); margin: 14px 2px 6px; }
+  .pie {
+    position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px 18px;
+    background: linear-gradient(to top, var(--bg) 70%, rgba(14,18,24,0));
+  }
+  .pie > div { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; }
+  .pie .btn { margin-top: 0; }
+  .pie .btn.suave { flex: 0 0 34%; }
+  #aviso { color: var(--danger); min-height: 22px; margin: 14px 2px 0; font-size: 15px; }
+  .paso { display: none; }
+  .paso.activo { display: block; }
+  .nota { color: var(--muted); font-size: 14px; margin-top: 22px; }
+</style>
+</head>
+<body>
+
+<h1>Crear alerta</h1>
+<p class="sub" id="subtitulo">Datos básicos</p>
+
+<!-- ===================== PASO 1 ===================== -->
+<section class="paso activo" id="paso1">
+  <label class="campo" for="alias">Nombre de la alerta</label>
+  <p class="hint">(Opcional. No afecta a los resultados)</p>
+  <input type="text" id="alias" maxlength="40" placeholder="Gráficas RTX a buen precio" autocomplete="off">
+
+  <label class="campo" for="grupo" style="margin-top:34px">Palabras clave</label>
+  <ul class="ayuda">
+    <li>Define qué palabras debe contener un anuncio.</li>
+    <li>Separa cada palabra con una coma (,). Da igual el orden.</li>
+    <li>Puedes crear varios grupos: si las palabras de cualquiera de ellos aparecen en el anuncio, recibirás la alerta.</li>
+  </ul>
+  <div class="caja">
+    <div class="cab"><span></span><span id="contGrupos">0/10</span></div>
+    <input type="text" id="grupo" placeholder="rtx, 3070" autocomplete="off" autocapitalize="off" enterkeyhint="done">
+    <button class="btn" id="btnGrupo" disabled>Crear grupo</button>
+    <div class="chips" id="listaGrupos"></div>
+  </div>
+
+  <div class="etq" style="margin-top:34px">
+    <label class="campo" style="margin:0">Plataformas <span class="req">*</span></label>
+  </div>
+  <p class="hint">Elige dónde quieres vigilar.</p>
+  <div class="chips" id="plataformas">
+    <button class="plat" data-p="wallapop" aria-pressed="false">Wallapop</button>
+    <button class="plat" data-p="vinted" aria-pressed="false">Vinted</button>
+  </div>
+</section>
+
+<!-- ===================== PASO 2 ===================== -->
+<section class="paso" id="paso2">
+  <label class="campo" style="margin-top:6px">Rango de precios</label>
+  <div class="etq"><span>Mínimo</span><span>Máximo</span></div>
+  <div class="fila">
+    <div class="precio"><input type="number" id="pmin" inputmode="decimal" min="0" step="any" placeholder="100"><span>€</span></div>
+    <div class="precio"><input type="number" id="pmax" inputmode="decimal" min="0" step="any" placeholder="1500"><span>€</span></div>
+  </div>
+
+  <div class="caja" style="margin-top:34px">
+    <div class="cab"><b style="color:var(--text);font-size:19px;font-weight:600">Palabras a ignorar</b><span id="contIgn">0/30</span></div>
+    <ul class="ayuda" style="margin-bottom:12px">
+      <li>Si aparecen en el anuncio, se descarta.</li>
+      <li>Escríbelas separadas por comas (,).</li>
+    </ul>
+    <div class="fila">
+      <input type="text" id="ign" placeholder="Ej: roto, solo caja" autocomplete="off" autocapitalize="off" enterkeyhint="done">
+      <button class="btn chico fijo" id="btnIgn" disabled>Agregar</button>
+    </div>
+    <div class="chips" id="listaIgn"></div>
+  </div>
+
+  <p class="nota">Localización, regex e IA no están disponibles todavía en este bot.</p>
+</section>
+
+<div id="aviso" role="alert"></div>
+
+<div class="pie">
+  <div>
+    <button class="btn suave" id="btnAtras" style="display:none">Atrás</button>
+    <button class="btn primario" id="btnSiguiente" disabled>Continuar</button>
+  </div>
+</div>
+
+<script>
+// ============ <logic> (funciones puras, sin DOM) ============
+var MAX_GRUPOS = 10, MAX_PALABRAS = 10, MAX_IGN = 30;
+
+function limpiaPalabras(txt) {
+  var vistos = {}, salida = [];
+  String(txt || "").split(/[,\n]/).forEach(function (s) {
+    s = s.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 40);
+    if (s && !vistos[s]) { vistos[s] = true; salida.push(s); }
+  });
+  return salida;
+}
+
+function claveGrupo(g) { return g.slice().sort().join("|"); }
+
+function numero(txt) {
+  txt = String(txt == null ? "" : txt).trim().replace(",", ".");
+  if (txt === "") return null;
+  var n = Number(txt);
+  return isFinite(n) && n >= 0 ? n : NaN;
+}
+
+function construirPayload(est, pminTxt, pmaxTxt, alias) {
+  var pmin = numero(pminTxt), pmax = numero(pmaxTxt);
+  if (Number.isNaN(pmin) || Number.isNaN(pmax)) return { error: "Los precios tienen que ser números." };
+  if (pmin !== null && pmax !== null && pmin > pmax) return { error: "El precio mínimo no puede ser mayor que el máximo." };
+  if (!est.grupos.length) return { error: "Añade al menos un grupo de palabras." };
+  if (!est.plats.length) return { error: "Elige al menos una plataforma." };
+  return {
+    datos: {
+      v: 1,
+      alias: String(alias || "").trim().slice(0, 40),
+      grupos: est.grupos,
+      plataformas: est.plats,
+      precio_min: pmin,
+      precio_max: pmax,
+      ignorar: est.ignorar
+    }
+  };
+}
+// ============ </logic> ============
+
+var tg = window.Telegram && window.Telegram.WebApp;
+if (tg) {
+  try { tg.ready(); tg.expand(); tg.setHeaderColor("#0e1218"); tg.setBackgroundColor("#0e1218"); } catch (e) {}
+}
+
+var est = { grupos: [], ignorar: [], plats: [] };
+var paso = 1;
+function $(id) { return document.getElementById(id); }
+function aviso(t) { $("aviso").textContent = t || ""; }
+
+function chip(texto, alQuitar) {
+  var s = document.createElement("span");
+  s.className = "chip";
+  var t = document.createElement("span");
+  t.textContent = texto;
+  var b = document.createElement("button");
+  b.type = "button";
+  b.setAttribute("aria-label", "Quitar");
+  b.textContent = "×";
+  b.addEventListener("click", alQuitar);
+  s.appendChild(t); s.appendChild(b);
+  return s;
+}
+
+function pintar() {
+  var lg = $("listaGrupos"); lg.textContent = "";
+  est.grupos.forEach(function (g, i) {
+    lg.appendChild(chip(g.join(" + "), function () { est.grupos.splice(i, 1); pintar(); }));
+  });
+  $("contGrupos").textContent = est.grupos.length + "/" + MAX_GRUPOS;
+  var li = $("listaIgn"); li.textContent = "";
+  est.ignorar.forEach(function (p, i) {
+    li.appendChild(chip(p, function () { est.ignorar.splice(i, 1); pintar(); }));
+  });
+  $("contIgn").textContent = est.ignorar.length + "/" + MAX_IGN;
+  $("btnGrupo").disabled = limpiaPalabras($("grupo").value).length === 0;
+  $("btnIgn").disabled = limpiaPalabras($("ign").value).length === 0;
+  document.querySelectorAll(".plat").forEach(function (b) {
+    b.setAttribute("aria-pressed", est.plats.indexOf(b.dataset.p) >= 0 ? "true" : "false");
+  });
+  $("btnSiguiente").disabled = paso === 1 && !(est.grupos.length && est.plats.length);
+}
+
+function anadirGrupo() {
+  var palabras = limpiaPalabras($("grupo").value).slice(0, MAX_PALABRAS);
+  if (!palabras.length) return true;
+  if (est.grupos.length >= MAX_GRUPOS) { aviso("Máximo " + MAX_GRUPOS + " grupos."); return false; }
+  var k = claveGrupo(palabras);
+  if (est.grupos.some(function (g) { return claveGrupo(g) === k; })) { aviso("Ese grupo ya está."); return false; }
+  est.grupos.push(palabras);
+  $("grupo").value = "";
+  aviso("");
+  pintar();
+  return true;
+}
+
+function anadirIgnorar() {
+  limpiaPalabras($("ign").value).forEach(function (p) {
+    if (est.ignorar.length < MAX_IGN && est.ignorar.indexOf(p) < 0) est.ignorar.push(p);
+  });
+  $("ign").value = "";
+  aviso("");
+  pintar();
+}
+
+function irAPaso(n) {
+  paso = n;
+  $("paso1").classList.toggle("activo", n === 1);
+  $("paso2").classList.toggle("activo", n === 2);
+  $("subtitulo").textContent = n === 1 ? "Datos básicos" : "Ajustes avanzados";
+  $("btnAtras").style.display = n === 2 ? "" : "none";
+  $("btnSiguiente").textContent = n === 1 ? "Continuar" : "Crear alerta";
+  if (tg && tg.BackButton) { try { if (n === 2) tg.BackButton.show(); else tg.BackButton.hide(); } catch (e) {} }
+  aviso("");
+  window.scrollTo(0, 0);
+  pintar();
+}
+
+function enviar() {
+  anadirIgnorar();
+  var r = construirPayload(est, $("pmin").value, $("pmax").value, $("alias").value);
+  if (r.error) { aviso(r.error); return; }
+  var texto = JSON.stringify(r.datos);
+  if (tg && typeof tg.sendData === "function") {
+    try { tg.sendData(texto); } catch (e) { aviso("No se pudo enviar: " + e.message); }
+  } else {
+    aviso("Ábrelo desde el botón «Crear alerta» de tu bot para poder enviarlo. (Vista de prueba)");
+    console.log(texto);
+  }
+}
+
+$("grupo").addEventListener("input", pintar);
+$("grupo").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); anadirGrupo(); } });
+$("btnGrupo").addEventListener("click", anadirGrupo);
+$("ign").addEventListener("input", pintar);
+$("ign").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); anadirIgnorar(); } });
+$("btnIgn").addEventListener("click", anadirIgnorar);
+document.querySelectorAll(".plat").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var i = est.plats.indexOf(b.dataset.p);
+    if (i >= 0) est.plats.splice(i, 1); else est.plats.push(b.dataset.p);
+    aviso("");
+    pintar();
+  });
+});
+$("btnAtras").addEventListener("click", function () { irAPaso(1); });
+$("btnSiguiente").addEventListener("click", function () {
+  if (paso === 1) {
+    if (!anadirGrupo()) return;          // si dejó texto sin pulsar «Crear grupo», lo añade
+    if (!est.grupos.length || !est.plats.length) { aviso("Añade un grupo y elige una plataforma."); return; }
+    irAPaso(2);
+  } else {
+    enviar();
+  }
+});
+if (tg && tg.BackButton) {
+  try { tg.BackButton.onClick(function () { if (paso === 2) irAPaso(1); }); } catch (e) {}
+}
+pintar();
+</script>
+</body>
+</html>
